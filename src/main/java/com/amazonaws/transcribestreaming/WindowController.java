@@ -40,6 +40,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
+
+
 /**
  * This class primarily controls the GUI for this application. Most of the code relevant to starting and working
  * with our streaming API can be found in TranscribeStreamingClientWrapper.java, with the exception of some result
@@ -57,6 +62,9 @@ public class WindowController {
     private CompletableFuture<Void> inProgressStreamingRequest;
     private String finalTranscript = "";
     private Stage primaryStage;
+    private Queue<String> transcriptQueue = new LinkedList<>();
+    private String displayTextSkiping = "";
+    private int SKIP_MAX = 3;
 
     public WindowController(Stage primaryStage) {
         client = new TranscribeStreamingClientWrapper();
@@ -197,6 +205,21 @@ public class WindowController {
             }
 
             /*
+            Get the first n words of latestTranscript, where n is the number of words in the oldTranscript.
+            */
+            public String getSameNumberOfWords(String oldTranscript, String latestTranscript) { 
+                if (oldTranscript == null || oldTranscript.isEmpty()) {
+                    return "";
+                }
+
+                String[] words = oldTranscript.split("\\s+");
+                int oldWordsLength = words.length;
+
+                words = latestTranscript.split("\\s+");
+                return String.join(" ", Arrays.copyOfRange(words, 0, oldWordsLength));
+            }
+
+            /*
             This handles each event being received from the Transcribe service. In this example we are displaying the
             transcript as it is updated, and when we receive a "final" transcript, we append it to our finalTranscript
             which is returned at the end of the microphone streaming.
@@ -214,12 +237,28 @@ public class WindowController {
                             if (!firstResult.isPartial()) {
                                 finalTranscript += transcript + " ";
                                 displayText = finalTranscript;
+                                
+                                displayTextSkiping = displayText;
+                                transcriptQueue.clear();    
                             } else {
                                 displayText = finalTranscript + " " + transcript;
+                                transcriptQueue.offer(transcript);
+                                
+                                if (transcriptQueue.size() > SKIP_MAX) {
+                                    String transcriptProcessed = "";
+                                    String oldTranscript = transcriptQueue.peek();
+                                    transcriptQueue.poll();
+                                    
+                                    transcriptProcessed = getSameNumberOfWords(oldTranscript, transcript);
+                                    displayTextSkiping = finalTranscript + " " + transcriptProcessed;
+                                }
                             }
                             Platform.runLater(() -> {
                                 outputTextArea.setText(displayText);
                                 outputTextArea.setScrollTop(Double.MAX_VALUE);
+
+                                finalTextArea.setText(displayTextSkiping);
+                                finalTextArea.setScrollTop(Double.MAX_VALUE);
                             });
                         }
                     }
