@@ -64,7 +64,7 @@ public class WindowController {
     private Stage primaryStage;
     private Queue<String> transcriptQueue = new LinkedList<>();
     private String displayTextSkiping = "";
-    private int SKIP_MAX = 3;
+    private int SKIP_MAX = 4;
 
     public WindowController(Stage primaryStage) {
         client = new TranscribeStreamingClientWrapper();
@@ -145,7 +145,7 @@ public class WindowController {
         outputTextArea.setEditable(false);
         grid.add(outputTextArea, 0, 2, 2, 1);
 
-        Text finalText = new Text("Final Transcription:");
+        Text finalText = new Text("In Progress + HTV Delay (skip=" + Integer.toString(SKIP_MAX) + "):");
         grid.add(finalText, 0, 3, 2, 1);
 
         finalTextArea = new TextArea();
@@ -237,7 +237,7 @@ public class WindowController {
                             if (!firstResult.isPartial()) {
                                 finalTranscript += transcript + " ";
                                 displayText = finalTranscript;
-                                
+
                                 displayTextSkiping = displayText;
                                 transcriptQueue.clear();    
                             } else {
